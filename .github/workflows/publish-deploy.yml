@@ -7,8 +7,8 @@ on:
         required: false
         type: boolean
         default: false
-#  push:
-#    branches: [master]
+  push:
+    branches: [master]
 
 env:
   AZURE_CONTAINER_REGISTRY: crudappuni
@@ -49,13 +49,13 @@ jobs:
           tags: ${{ env.AZURE_CONTAINER_REGISTRY}}.azurecr.io/${{ env.CONTAINER_APP_NAME }}:${{ github.sha }}
 
       - name: Azure login
-        if: inputs.deploy == true
+        if: github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && inputs.deploy == true)
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Container Apps
-        if: inputs.deploy == true
+        if: github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && inputs.deploy == true)
         uses: azure/container-apps-deploy-action@v1
         with:
           imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY}}.azurecr.io/${{ env.CONTAINER_APP_NAME }}:${{ github.sha }}
