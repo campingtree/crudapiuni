@@ -13,7 +13,7 @@ on:
 env:
   AZURE_CONTAINER_REGISTRY: crudappuni
   CONTAINER_APP_NAME: crudappuni
-  RESOURCE_GROUP: CrudApp(uni)
+  RESOURCE_GROUP: 'CrudApp\(uni\)'
 
 jobs:
   build-and-deploy:
