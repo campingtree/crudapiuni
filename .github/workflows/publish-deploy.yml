@@ -61,7 +61,7 @@ jobs:
           imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY}}.azurecr.io/${{ env.CONTAINER_APP_NAME }}:${{ github.sha }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppName: ${{ env.CONTAINER_APP_NAME }}
-          environmentVariables: |
+          environmentVariables: >
             ASPNETCORE_ENVIRONMENT=Production
             ConnectionStrings__Postgres=secretref:connectionstrings--postgres
             ConnectionStrings__BlobStorage=secretref:connectionstrings--blobstorage
