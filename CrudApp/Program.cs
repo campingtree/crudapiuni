@@ -1,28 +1,59 @@
+using Azure.Storage.Blobs;
 using CrudApp.Components;
+using CrudApp.Data;
+using CrudApp.Options;
+using CrudApp.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+builder.Services.AddRazorComponents();
+
+builder.Services.AddOptions<DatabaseOptions>()
+    .Bind(builder.Configuration.GetSection("Database"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.Schema), "Database:Schema is required.")
+    .ValidateOnStart();
+builder.Services.AddOptions<BlobStorageOptions>()
+    .Bind(builder.Configuration.GetSection("BlobStorage"))
+    .Validate(o => !string.IsNullOrWhiteSpace(o.ContainerName), "BlobStorage:ContainerName is required.")
+    .ValidateOnStart();
+builder.Services.AddOptions<ForecastOptions>()
+    .Bind(builder.Configuration.GetSection("Forecast"))
+    .Validate(o => o.RefreshIntervalMinutes > 0, "Forecast:RefreshIntervalMinutes must be positive.")
+    .ValidateOnStart();
+
+var postgres = builder.Configuration.GetConnectionString("Postgres")
+    ?? throw new InvalidOperationException("ConnectionStrings:Postgres is required.");
+var blobConnection = builder.Configuration.GetConnectionString("BlobStorage")
+    ?? throw new InvalidOperationException("ConnectionStrings:BlobStorage is required.");
+
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(postgres));
+builder.Services.AddSingleton(new BlobServiceClient(blobConnection));
+builder.Services.AddScoped<PointPhotoStorage>();
+builder.Services.AddHttpClient<OpenMeteoForecastClient>(client =>
+{
+    client.BaseAddress = new Uri("https://api.open-meteo.com/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
+builder.Services.AddHostedService<ForecastRefreshWorker>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
-
 app.UseAntiforgery();
-
+app.MapControllers();
+app.UseSwagger();
+app.UseSwaggerUI();
 app.MapStaticAssets();
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+app.MapRazorComponents<App>();
 
 app.Run();

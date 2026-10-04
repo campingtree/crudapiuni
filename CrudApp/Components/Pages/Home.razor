@@ -1,7 +1,58 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Map points</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="workspace">
+    <section class="map-panel" aria-label="Points map">
+        <div id="map"></div>
+        <p class="map-hint">Click the map to choose coordinates for a point.</p>
+    </section>
 
-Welcome to your new app.
+    <aside class="editor-panel">
+        <div class="panel-heading">
+            <div>
+                <p class="eyebrow">Points of interest</p>
+                <h1>My places</h1>
+            </div>
+            <button id="new-point" class="button button-primary" type="button">New point</button>
+        </div>
+
+        <p id="status" role="status" class="status"></p>
+        <div id="point-list" class="point-list" aria-label="Saved points"></div>
+
+        <section id="point-details" class="details" hidden>
+            <h2 id="detail-name"></h2>
+            <p id="detail-description"></p>
+            <p id="detail-meta" class="muted"></p>
+            <div id="detail-forecast" class="forecast"></div>
+            <img id="detail-photo" alt="Photo of the selected point" hidden />
+            <div class="action-row">
+                <button id="edit-point" class="button" type="button">Edit</button>
+                <button id="delete-point" class="button button-danger" type="button">Delete</button>
+            </div>
+        </section>
+
+        <form id="point-form" class="point-form" hidden>
+            <h2 id="form-title">New point</h2>
+            <label>Name <input name="name" maxlength="160" required /></label>
+            <label>Description <textarea name="description" maxlength="2000" rows="3"></textarea></label>
+            <div class="field-row">
+                <label>Latitude <input name="latitude" type="number" min="-90" max="90" step="any" required /></label>
+                <label>Longitude <input name="longitude" type="number" min="-180" max="180" step="any" required /></label>
+            </div>
+            <label>Visited on <input name="visitedOn" type="date" /></label>
+            <div class="field-row field-row-bottom">
+                <label>Priority <input name="priority" type="number" min="0" max="5" value="0" required /></label>
+                <label class="checkbox-label"><input name="isFavorite" type="checkbox" /> Favorite</label>
+            </div>
+            <label>Photo (JPEG, PNG, or WebP; up to 5 MB)
+                <input name="photo" type="file" accept="image/jpeg,image/png,image/webp" />
+            </label>
+            <div class="action-row">
+                <button class="button button-primary" type="submit">Save point</button>
+                <button id="cancel-edit" class="button" type="button">Cancel</button>
+                <button id="remove-photo" class="button button-danger" type="button" hidden>Remove photo</button>
+            </div>
+        </form>
+    </aside>
+</div>
