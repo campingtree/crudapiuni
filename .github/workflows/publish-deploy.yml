@@ -63,3 +63,5 @@ jobs:
           containerAppName: ${{ env.CONTAINER_APP_NAME }}
           environmentVariables: |
             ASPNETCORE_ENVIRONMENT=Production
+            ConnectionStrings__Postgres=secretref:connectionstrings--postgres
+            ConnectionStrings__BlobStorage=secretref:connectionstrings--blobstorage
