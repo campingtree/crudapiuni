@@ -24,7 +24,7 @@ env:
   AZURE_CONTAINER_REGISTRY: crudappuni
   CONTAINER_APP_NAME: crudappuni
   WORKER_CONTAINER_APP_NAME: crudappuni-worker
-  RESOURCE_GROUP: 'CrudApp(uni)'
+  RESOURCE_GROUP: 'CrudApp\(uni\)'
 
 jobs:
   api:
