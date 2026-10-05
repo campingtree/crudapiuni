@@ -20,10 +20,6 @@ builder.Services.AddOptions<BlobStorageOptions>()
     .Bind(builder.Configuration.GetSection("BlobStorage"))
     .Validate(o => !string.IsNullOrWhiteSpace(o.ContainerName), "BlobStorage:ContainerName is required.")
     .ValidateOnStart();
-builder.Services.AddOptions<ForecastOptions>()
-    .Bind(builder.Configuration.GetSection("Forecast"))
-    .Validate(o => o.RefreshIntervalMinutes > 0, "Forecast:RefreshIntervalMinutes must be positive.")
-    .ValidateOnStart();
 
 var postgres = builder.Configuration.GetConnectionString("Postgres")
     ?? throw new InvalidOperationException("ConnectionStrings:Postgres is required.");
@@ -33,12 +29,6 @@ var blobConnection = builder.Configuration.GetConnectionString("BlobStorage")
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(postgres));
 builder.Services.AddSingleton(new BlobServiceClient(blobConnection));
 builder.Services.AddScoped<PointPhotoStorage>();
-builder.Services.AddHttpClient<OpenMeteoForecastClient>(client =>
-{
-    client.BaseAddress = new Uri("https://api.open-meteo.com/");
-    client.Timeout = TimeSpan.FromSeconds(20);
-});
-builder.Services.AddHostedService<ForecastRefreshWorker>();
 
 var app = builder.Build();
 

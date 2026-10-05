@@ -1,4 +1,4 @@
-namespace CrudApp.Options;
+namespace CrudApp.Worker.Options;
 
 public sealed class ForecastOptions
 {

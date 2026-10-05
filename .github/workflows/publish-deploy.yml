@@ -3,7 +3,17 @@ name: Deploy to Azure Container Apps
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: Project to publish or deploy
+        required: true
+        type: choice
+        default: both
+        options:
+          - both
+          - api
+          - worker
       deploy:
+        description: Deploy the published image(s)
         required: false
         type: boolean
         default: false
@@ -13,22 +23,17 @@ on:
 env:
   AZURE_CONTAINER_REGISTRY: crudappuni
   CONTAINER_APP_NAME: crudappuni
-  RESOURCE_GROUP: 'CrudApp\(uni\)'
+  WORKER_CONTAINER_APP_NAME: crudappuni-worker
+  RESOURCE_GROUP: 'CrudApp(uni)'
 
 jobs:
-  build-and-deploy:
+  api:
+    name: Publish and deploy API
+    if: github.event_name != 'workflow_dispatch' || inputs.target == 'both' || inputs.target == 'api'
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Build
-        run: dotnet build --configuration Release
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -40,28 +45,71 @@ jobs:
           username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
           password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
 
-      - name: Build and push image
+      - name: Build and push API image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: CrudApp/Dockerfile
           push: true
-          tags: ${{ env.AZURE_CONTAINER_REGISTRY}}.azurecr.io/${{ env.CONTAINER_APP_NAME }}:${{ github.sha }}
+          tags: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_APP_NAME }}:${{ github.sha }}
 
       - name: Azure login
-        if: github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && inputs.deploy == true)
+        if: github.event_name != 'workflow_dispatch' || inputs.deploy == true
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Container Apps
-        if: github.event_name != 'workflow_dispatch' || (github.event_name == 'workflow_dispatch' && inputs.deploy == true)
+      - name: Deploy API to Azure Container Apps
+        if: github.event_name != 'workflow_dispatch' || inputs.deploy == true
         uses: azure/container-apps-deploy-action@v1
         with:
-          imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY}}.azurecr.io/${{ env.CONTAINER_APP_NAME }}:${{ github.sha }}
+          imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_APP_NAME }}:${{ github.sha }}
           resourceGroup: ${{ env.RESOURCE_GROUP }}
           containerAppName: ${{ env.CONTAINER_APP_NAME }}
           environmentVariables: >
             ASPNETCORE_ENVIRONMENT=Production
             ConnectionStrings__Postgres=secretref:connectionstrings--postgres
             ConnectionStrings__BlobStorage=secretref:connectionstrings--blobstorage
+
+  worker:
+    name: Publish and deploy worker
+    if: github.event_name != 'workflow_dispatch' || inputs.target == 'both' || inputs.target == 'worker'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login into Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io
+          username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+
+      - name: Build and push worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: CrudApp.Worker/Dockerfile
+          push: true
+          tags: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.WORKER_CONTAINER_APP_NAME }}:${{ github.sha }}
+
+      - name: Azure login
+        if: github.event_name != 'workflow_dispatch' || inputs.deploy == true
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy worker to Azure Container Apps
+        if: github.event_name != 'workflow_dispatch' || inputs.deploy == true
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.WORKER_CONTAINER_APP_NAME }}:${{ github.sha }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          containerAppName: ${{ env.WORKER_CONTAINER_APP_NAME }}
+          environmentVariables: >
+            DOTNET_ENVIRONMENT=Production
+            ConnectionStrings__Postgres=secretref:connectionstrings--postgres

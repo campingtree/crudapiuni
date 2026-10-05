@@ -1,4 +1,4 @@
-namespace CrudApp.Services;
+namespace CrudApp.Worker.Services;
 
 public sealed record ForecastSnapshot(
     DateOnly Date,

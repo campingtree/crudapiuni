@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 
-namespace CrudApp.Services;
+namespace CrudApp.Worker.Services;
 
 public sealed class OpenMeteoForecastClient(HttpClient client)
 {
