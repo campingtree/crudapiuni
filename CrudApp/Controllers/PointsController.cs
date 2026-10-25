@@ -1,4 +1,4 @@
-using Azure;
+using Amazon.S3;
 using CrudApp.Contracts;
 using CrudApp.Data;
 using CrudApp.Models;
@@ -109,9 +109,9 @@ public sealed class PointsController(AppDbContext db, PointPhotoStorage photos, 
         }
 
         await using var input = file.OpenReadStream();
-        var newBlobName = await photos.UploadAsync(input, file.ContentType, cancellationToken);
+        var newObjectKey = await photos.UploadAsync(input, file.ContentType, cancellationToken);
         var oldBlobName = point.PhotoBlobName;
-        point.PhotoBlobName = newBlobName;
+        point.PhotoBlobName = newObjectKey;
         point.PhotoContentType = file.ContentType;
         try
         {
@@ -119,7 +119,7 @@ public sealed class PointsController(AppDbContext db, PointPhotoStorage photos, 
         }
         catch
         {
-            await DeleteOldPhotoAsync(newBlobName, CancellationToken.None);
+            await DeleteOldPhotoAsync(newObjectKey, CancellationToken.None);
             throw;
         }
 
@@ -137,10 +137,10 @@ public sealed class PointsController(AppDbContext db, PointPhotoStorage photos, 
 
         try
         {
-            var download = await photos.DownloadAsync(point.PhotoBlobName, cancellationToken);
-            return File(download.Content, point.PhotoContentType ?? "application/octet-stream");
+            var content = await photos.DownloadAsync(point.PhotoBlobName, cancellationToken);
+            return File(content, point.PhotoContentType ?? "application/octet-stream");
         }
-        catch (RequestFailedException exception) when (exception.Status == StatusCodes.Status404NotFound)
+        catch (AmazonS3Exception exception) when (exception.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             return NotFound();
         }
@@ -172,7 +172,7 @@ public sealed class PointsController(AppDbContext db, PointPhotoStorage photos, 
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            logger.LogWarning(exception, "Could not remove photo blob {BlobName}", blobName);
+            logger.LogWarning(exception, "Could not remove photo object {ObjectKey}", blobName);
         }
     }
 

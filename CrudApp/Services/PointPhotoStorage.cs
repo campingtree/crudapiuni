@@ -1,28 +1,43 @@
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
+using Amazon.S3;
+using Amazon.S3.Model;
 using CrudApp.Options;
 using Microsoft.Extensions.Options;
 
 namespace CrudApp.Services;
 
-public sealed class PointPhotoStorage(BlobServiceClient client, IOptions<BlobStorageOptions> options)
+public sealed class PointPhotoStorage(IAmazonS3 client, IOptions<S3StorageOptions> options)
 {
-    private BlobContainerClient Container => client.GetBlobContainerClient(options.Value.ContainerName);
-
     public async Task<string> UploadAsync(Stream content, string contentType, CancellationToken cancellationToken)
     {
-        var name = Guid.NewGuid().ToString("N");
-        var container = Container;
-        await container.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
-        await container.GetBlobClient(name).UploadAsync(content,
-            new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = contentType } },
-            cancellationToken);
-        return name;
+        var key = Guid.NewGuid().ToString("N");
+        await client.PutObjectAsync(new PutObjectRequest
+        {
+            BucketName = options.Value.BucketName,
+            Key = key,
+            InputStream = content,
+            ContentType = contentType
+        }, cancellationToken);
+        return key;
     }
 
-    public async Task<BlobDownloadStreamingResult> DownloadAsync(string name, CancellationToken cancellationToken) =>
-        (await Container.GetBlobClient(name).DownloadStreamingAsync(cancellationToken: cancellationToken)).Value;
+    public async Task<byte[]> DownloadAsync(string key, CancellationToken cancellationToken)
+    {
+        using var response = await client.GetObjectAsync(new GetObjectRequest
+        {
+            BucketName = options.Value.BucketName,
+            Key = key
+        }, cancellationToken);
+        await using var content = new MemoryStream();
+        await response.ResponseStream.CopyToAsync(content, cancellationToken);
+        return content.ToArray();
+    }
 
-    public Task DeleteAsync(string name, CancellationToken cancellationToken) =>
-        Container.GetBlobClient(name).DeleteIfExistsAsync(cancellationToken: cancellationToken);
+    public async Task DeleteAsync(string key, CancellationToken cancellationToken)
+    {
+        await client.DeleteObjectAsync(new DeleteObjectRequest
+        {
+            BucketName = options.Value.BucketName,
+            Key = key
+        }, cancellationToken);
+    }
 }
