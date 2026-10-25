@@ -42,5 +42,5 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            registry.digitalocean.com/${{ vars.DOCR_REGISTRY_NAME }}/${{ matrix.image }}:latest
-            registry.digitalocean.com/${{ vars.DOCR_REGISTRY_NAME }}/${{ matrix.image }}:${{ github.sha }}
+            registry.digitalocean.com/${{ vars.DOCR_REGISTRY_NAME }}/crud-app:${{ matrix.image }}-latest
+#            registry.digitalocean.com/${{ vars.DOCR_REGISTRY_NAME }}/crud-app:${{ matrix.image }}-${{ github.sha }}
